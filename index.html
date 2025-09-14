@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<style>
+body{margin:0;font-family:sans-serif;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.container{max-width:1100px;width:100%;display:flex;flex-direction:column;gap:20px;padding:20px}
+.box{background:rgba(35,25,65,.7);border-radius:15px;padding:20px;box-shadow:0 0 20px rgba(255,20,145,.5)}
+h1,h2{color:#ff4da6;text-align:center}
+input,textarea{width:100%;padding:10px;border:2px solid #9370db;border-radius:10px;background:rgba(35,25,65,.6);color:#fff}
+input:focus,textarea:focus{outline:none;border-color:#ff4da6;box-shadow:0 0 10px rgba(255,105,180,.6)}
+button{padding:10px;border:none;border-radius:10px;cursor:pointer;font-weight:bold}
+#submitBtn{background:linear-gradient(135deg,#ff4da6,#9370db);color:#fff}
+#resetBtn{background:transparent;border:2px solid #9370db;color:#ff4da6}
+.role{display:flex;gap:10px}
+.role label{flex:1;text-align:center;padding:10px;border:2px solid #9370db;border-radius:10px;cursor:pointer}
+.role input{display:none}
+.role .selected{border-color:#ff4da6;background:rgba(255,105,180,.2)}
+.image-preview{width:120px;height:120px;border-radius:50%;overflow:hidden;margin:auto;border:3px solid #9370db;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.image-preview img{width:100%;height:100%;object-fit:cover}
+.user{border:1px solid #9370db;padding:10px;border-radius:10px;margin-bottom:10px}
+.user h3{color:#ff4da6}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);justify-content:center;align-items:center}
+.modal-content{background:#231941;padding:20px;border-radius:10px;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="box">
+    <h1>Student & Teacher Portal</h1>
+    <form id="registrationForm">
+      <input id="name" placeholder="Full Name" required>
+      <input id="email" type="email" placeholder="Email" required>
+      <input id="password" type="password" placeholder="Password" required>
+      <textarea id="bio" placeholder="Bio"></textarea>
+      <div class="image-preview" id="imagePreview"><i class="fas fa-user fa-2x"></i></div>
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="role">
+        <label><input type="radio" name="role" value="student" required>Student</label>
+        <label><input type="radio" name="role" value="teacher">Teacher</label>
+      </div>
+      <button id="submitBtn">Register</button>
+      <button type="reset" id="resetBtn">Clear</button>
+    </form>
+  </div>
+  <div class="box">
+    <h2>Registered Users</h2>
+    <div>
+      <button data-view="all">All</button>
+      <button data-view="student">Students</button>
+      <button data-view="teacher">Teachers</button>
+      <button id="clearData">Clear All</button>
+    </div>
+    <div id="userData">No users yet</div>
+  </div>
+</div>
+
+<!-- Cropper Modal -->
+<div class="modal" id="cropModal">
+  <div class="modal-content">
+    <h3>Crop Image</h3>
+    <img id="cropper-image">
+    <br>
+    <button id="crop-btn">Crop</button>
+    <button id="cancel-crop">Cancel</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script>
+let cropper,imgData='';
+const f=document.getElementById("registrationForm"),
+      uD=document.getElementById("userData"),
+      fI=document.getElementById("fileInput"),
+      m=document.getElementById("cropModal"),
+      cI=document.getElementById("cropper-image"),
+      iP=document.getElementById("imagePreview");
+fI.onchange=e=>{
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=ev=>{cI.src=ev.target.result;m.style.display="flex";cropper=new Cropper(cI,{aspectRatio:1})};r.readAsDataURL(file);
+};
+document.getElementById("crop-btn").onclick=()=>{imgData=cropper.getCroppedCanvas({width:200,height:200}).toDataURL();iP.innerHTML=`<img src="${imgData}">`;cropper.destroy();m.style.display="none"};
+document.getElementById("cancel-crop").onclick=()=>{cropper.destroy();m.style.display="none"};
+f.onsubmit=e=>{
+  e.preventDefault();
+  let u={id:Date.now(),name:f.name.value,email:f.email.value,password:"*".repeat(f.password.value.length),bio:f.bio.value,role:f.role.value,image:imgData,date:new Date().toLocaleString()};
+  let arr=JSON.parse(localStorage.getItem("portalUsers"))||[];arr.push(u);localStorage.setItem("portalUsers",JSON.stringify(arr));
+  f.reset();iP.innerHTML='<i class="fas fa-user fa-2x"></i>';imgData='';show();
+};
+function show(view="all"){
+  let arr=JSON.parse(localStorage.getItem("portalUsers"))||[];
+  let flt=view=="all"?arr:arr.filter(u=>u.role==view);
+  uD.innerHTML=flt.length?flt.map(u=>`<div class="user"><h3>${u.image?`<img src="${u.image}" style="width:30px;height:30px;border-radius:50%">`:""} ${u.name}</h3><p>${u.email}</p><p>${u.role}</p><p>${u.date}</p><button onclick="del(${u.id})">Delete</button></div>`).join(""):"No users";
+}
+function del(id){let arr=JSON.parse(localStorage.getItem("portalUsers"))||[];arr=arr.filter(u=>u.id!=id);localStorage.setItem("portalUsers",JSON.stringify(arr));show(document.querySelector("[data-view].active")?.dataset.view||"all")}
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.remove("active"));b.classList.add("active");show(b.dataset.view)});
+document.getElementById("clearData").onclick=()=>{localStorage.removeItem("portalUsers");show()};
+show();
+</script>
+</body>
+</html>
